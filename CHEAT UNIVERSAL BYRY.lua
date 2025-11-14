@@ -1,4 +1,4 @@
--- RyDev | UNIVERSAL - Complete Gaming Suite
+-- RyDev | UNIVERSAL - Complete Gaming Suite - Wind UI Integrated Version (No Extra GUI)
 
 -- Invisible Configuration
 getgenv().InvisibleSettings = {
@@ -44,6 +44,9 @@ local Camera = workspace.CurrentCamera
 local TweenService = game:GetService("TweenService")
 local StarterGui = game:GetService("StarterGui")
 local Workspace = game:GetService("Workspace")
+local MarketplaceService = game:GetService("MarketplaceService")
+local TextChatService = game:GetService("TextChatService")
+local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -82,6 +85,10 @@ local OriginalJumpPower = 50
 -- Network stabilizer placeholder
 local NetworkConnection = nil
 
+-- Product Faker Variables
+local productFakerActive = false
+local developerProducts = {}
+
 -- Colors - Blue & Black Theme
 local COLORS = {
     DARK_BLUE = Color3.fromRGB(0, 40, 85),
@@ -96,6 +103,17 @@ local COLORS = {
     RED = Color3.fromRGB(255, 60, 60),
     GOLD = Color3.fromRGB(255, 215, 0)
 }
+
+-- ========== WINDUI INTEGRATION ==========
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "RyDev | UNIVERSAL",
+    Author = "by RyDev",
+    Folder = "RyDev",
+    Icon = "shield",
+    NewElements = true,
+})
 
 -- Character refs untuk spectator
 local humanoid, rootPart
@@ -475,12 +493,28 @@ setupCameraSystem()
 -- TELEPORT FUNCTION
 local function teleportToTarget()
     if not CurrentTarget then 
+        WindUI:Notify({
+            Title = "Error",
+            Content = "No target selected!",
+            Icon = "x"
+        })
         return 
     end
     local lpHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local targetHRP = CurrentTarget.Character and CurrentTarget.Character:FindFirstChild("HumanoidRootPart")
     if lpHRP and targetHRP then
         lpHRP.CFrame = targetHRP.CFrame + Vector3.new(0, 3, 0)
+        WindUI:Notify({
+            Title = "Teleported",
+            Content = "Teleported to " .. CurrentTarget.Name,
+            Icon = "navigation"
+        })
+    else
+        WindUI:Notify({
+            Title = "Error",
+            Content = "Cannot teleport - character not found",
+            Icon = "x"
+        })
     end
 end
 
@@ -502,10 +536,22 @@ end
 
 local function toggleFling()
     if not CurrentTarget then 
+        WindUI:Notify({
+            Title = "Error",
+            Content = "No target selected!",
+            Icon = "x"
+        })
         return 
     end
     local lpHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not lpHRP then return end
+    if not lpHRP then 
+        WindUI:Notify({
+            Title = "Error",
+            Content = "Your character not found!",
+            Icon = "x"
+        })
+        return 
+    end
 
     FlingActive = not FlingActive
 
@@ -514,6 +560,11 @@ local function toggleFling()
         if not FlingThread then
             FlingThread = task.spawn(flingLoop)
         end
+        WindUI:Notify({
+            Title = "Fling Started",
+            Content = "Flinging " .. CurrentTarget.Name,
+            Icon = "zap"
+        })
     else
         FlingActive = false
         FlingThread = nil
@@ -527,6 +578,11 @@ local function toggleFling()
                 end
             end)
         end)
+        WindUI:Notify({
+            Title = "Fling Stopped",
+            Content = "Stopped flinging",
+            Icon = "square"
+        })
     end
 end
 
@@ -561,17 +617,41 @@ end
 local function toggleFollow()
     if FollowActive then
         stopFollow()
+        WindUI:Notify({
+            Title = "Follow Stopped",
+            Content = "Stopped following",
+            Icon = "user-x"
+        })
         return
     end
     if not CurrentTarget then 
+        WindUI:Notify({
+            Title = "Error",
+            Content = "No target selected!",
+            Icon = "x"
+        })
         return 
     end
     refreshCharacterRefs()
     startFollowToTarget(CurrentTarget)
+    WindUI:Notify({
+        Title = "Follow Started",
+        Content = "Following " .. CurrentTarget.Name,
+        Icon = "user-check"
+    })
 end
 
 -- SEND PART FUNCTION
 local function toggleSendPart()
+    if not CurrentTarget then 
+        WindUI:Notify({
+            Title = "Error",
+            Content = "No target selected!",
+            Icon = "x"
+        })
+        return 
+    end
+
     SendPartActive = not SendPartActive
 
     if SendPartActive then
@@ -590,8 +670,18 @@ local function toggleSendPart()
                 SendPartLoopThread = nil
             end)
         end
+        WindUI:Notify({
+            Title = "Send Parts Started",
+            Content = "Sending parts to " .. CurrentTarget.Name,
+            Icon = "send"
+        })
     else
         unfreezeCharacter()
+        WindUI:Notify({
+            Title = "Send Parts Stopped",
+            Content = "Stopped sending parts",
+            Icon = "square"
+        })
     end
 end
 
@@ -632,7 +722,11 @@ end
 -- Invisible Core Functions
 local function toggleInvisibility()
     if not LocalPlayer.Character then
-        warn("Character not found")
+        WindUI:Notify({
+            Title = "Error",
+            Content = "Character not found!",
+            Icon = "x"
+        })
         return
     end
 
@@ -641,7 +735,11 @@ local function toggleInvisibility()
     if playerState.isInvisible then
         local humanoidRootPart = getHumanoidRootPart()
         if not humanoidRootPart then
-            warn("HumanoidRootPart not found")
+            WindUI:Notify({
+                Title = "Error",
+                Content = "HumanoidRootPart not found!",
+                Icon = "x"
+            })
             return
         end
 
@@ -672,7 +770,11 @@ local function toggleInvisibility()
         -- Set character transparency
         setCharacterTransparency(LocalPlayer.Character, 0.5)
 
-        createNotification("Invisibility ON", "Kamu sekarang tidak terlihat")
+        WindUI:Notify({
+            Title = "Invisibility ON",
+            Content = "Kamu sekarang tidak terlihat",
+            Icon = "eye-off"
+        })
     else
         -- Remove invisible chair
         local invisChair = workspace:FindFirstChild("invischair")
@@ -685,14 +787,22 @@ local function toggleInvisibility()
             setCharacterTransparency(LocalPlayer.Character, 0)
         end
 
-        createNotification("Invisibility OFF", "Anda sekarang terlihat")
+        WindUI:Notify({
+            Title = "Invisibility OFF",
+            Content = "Anda sekarang terlihat",
+            Icon = "eye"
+        })
     end
 end
 
 local function toggleSpeedBoost()
     local humanoid = getHumanoid()
     if not humanoid then
-        warn("Humanoid not found")
+        WindUI:Notify({
+            Title = "Error",
+            Content = "Humanoid not found!",
+            Icon = "x"
+        })
         return
     end
 
@@ -700,10 +810,18 @@ local function toggleSpeedBoost()
 
     if playerState.isSpeedBoosted then
         humanoid.WalkSpeed = getgenv().InvisibleSettings.BoostedSpeed
-        createNotification("Speed Boost ON", "Kecepatan ditingkatkan!")
+        WindUI:Notify({
+            Title = "Speed Boost ON",
+            Content = "Kecepatan ditingkatkan!",
+            Icon = "zap"
+        })
     else
         humanoid.WalkSpeed = playerState.originalSpeed
-        createNotification("Speed Boost OFF", "Atur Ulang Kecepatan")
+        WindUI:Notify({
+            Title = "Speed Boost OFF",
+            Content = "Atur Ulang Kecepatan",
+            Icon = "zap-off"
+        })
     end
 end
 
@@ -1040,7 +1158,7 @@ local function PlayerRemoving(player)
     RemoveESP(player)
 end
 
--- Initialize systems
+-- Initialize ESP systems
 for _, player in pairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         spawn(function()
@@ -1067,7 +1185,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     resetPlayerState()
 end)
 
--- Main update loop
+-- Main ESP update loop
 RunService.Heartbeat:Connect(function()
     for player, esp in pairs(ESPObjects) do
         if player and esp and player.Character then
@@ -1085,473 +1203,114 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ========== PRODUCT FAKER SYSTEM ==========
+-- ========== PRODUCT FAKER SYSTEM (NO GUI) ==========
 
-local MarketplaceService = game:GetService("MarketplaceService")
-local productFakerActive = false
-local productFakerGui = nil
-local activeResetThreads = setmetatable({}, { __mode = "k" })
-
-local function Finished(productInfo)
+local function Finished(productId)
     local success, err = pcall(function()
-        MarketplaceService:SignalPromptProductPurchaseFinished(localPlayer.UserId, productInfo.ProductId, true)
+        MarketplaceService:SignalPromptProductPurchaseFinished(LocalPlayer.UserId, productId, true)
     end)
     if success then
+        return true
+    end
+
+    local success2, err2 = pcall(function()
+        MarketplaceService:SignalPromptProductPurchaseFinished(LocalPlayer, productId, true)
+    end)
+    return success2
+end
+
+local function loadDeveloperProducts()
+    local success, products = pcall(function()
+        return MarketplaceService:GetDeveloperProductsAsync()
+    end)
+
+    if not success then
+        WindUI:Notify({
+            Title = "Product Faker Error",
+            Content = "Failed to load developer products!",
+            Icon = "x"
+        })
+        return {}
+    end
+    
+    local allProducts = products:GetCurrentPage()
+    developerProducts = {}
+    
+    for _, productInfo in pairs(allProducts) do
+        table.insert(developerProducts, {
+            Name = productInfo.Name,
+            Id = productInfo.ProductId,
+            Description = productInfo.Description,
+            Price = productInfo.PriceInRobux
+        })
+    end
+    
+    return developerProducts
+end
+
+local function buyAllProducts()
+    local products = loadDeveloperProducts()
+    if #products == 0 then
+        WindUI:Notify({
+            Title = "Product Faker",
+            Content = "No products found!",
+            Icon = "x"
+        })
         return
     end
-
-    pcall(function()
-        MarketplaceService:SignalPromptProductPurchaseFinished(localPlayer, productInfo.ProductId, true)
-    end)
+    
+    local successCount = 0
+    for i, product in ipairs(products) do
+        if Finished(product.Id) then
+            successCount = successCount + 1
+        end
+        task.wait(0.2)
+    end
+    
+    WindUI:Notify({
+        Title = "Product Faker",
+        Content = string.format("Successfully purchased %d/%d products!", successCount, #products),
+        Icon = "shopping-bag"
+    })
 end
 
-local function createProductFakerGUI()
-    if productFakerGui then
-        productFakerGui:Destroy()
-        productFakerGui = nil
+local function buyProductById(productId)
+    if Finished(productId) then
+        WindUI:Notify({
+            Title = "Product Faker",
+            Content = "Product purchased successfully!",
+            Icon = "check"
+        })
+        return true
+    else
+        WindUI:Notify({
+            Title = "Product Faker",
+            Content = "Failed to purchase product!",
+            Icon = "x"
+        })
+        return false
     end
+end
 
-    local mainGui = Instance.new("ScreenGui")
-    mainGui.Name = "RyDev_ProductFaker"
-    mainGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    mainGui.Parent = game.CoreGui
-
-    local developerProductsFrame = Instance.new("TextButton")
-    developerProductsFrame.Font = Enum.Font.GothamBold
-    developerProductsFrame.Text = "Developer Products - RyDev"
-    developerProductsFrame.TextColor3 = Color3.fromRGB(255, 255, 255)
-    developerProductsFrame.TextSize = 16
-    developerProductsFrame.AutoButtonColor = false
-    developerProductsFrame.BackgroundColor3 = Color3.fromRGB(46, 46, 46)
-    developerProductsFrame.BorderSizePixel = 0
-    developerProductsFrame.Position = UDim2.new(0.35, 0, 0.3, 0)
-    developerProductsFrame.Size = UDim2.new(0, 252, 0, 35)
-    developerProductsFrame.Parent = mainGui
-
-    local frameCorner = Instance.new("UICorner")
-    frameCorner.CornerRadius = UDim.new(0, 6)
-    frameCorner.Parent = developerProductsFrame
-
-    local closeButton = Instance.new("TextButton")
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.Text = "X"
-    closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeButton.TextSize = 18
-    closeButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-    closeButton.BorderSizePixel = 0
-    closeButton.Position = UDim2.new(1, -32, 0, 2.5)
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Parent = developerProductsFrame
-
-    local closeButtonCorner = Instance.new("UICorner")
-    closeButtonCorner.CornerRadius = UDim.new(0, 6)
-    closeButtonCorner.Parent = closeButton
-
-    task.delay(0.3, function()
-        local buyAllProductsButton = Instance.new("TextButton")
-        buyAllProductsButton.Name = "BuyAllProductsButton"
-        buyAllProductsButton.Font = Enum.Font.GothamBold
-        buyAllProductsButton.Text = "Buy All Products"
-        buyAllProductsButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        buyAllProductsButton.TextSize = 14
-        buyAllProductsButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-        buyAllProductsButton.BorderSizePixel = 0
-        buyAllProductsButton.Position = UDim2.new(0, 0, 1, 2)
-        buyAllProductsButton.Size = UDim2.new(1, 0, 0, 30)
-        buyAllProductsButton.Parent = developerProductsFrame
-        Instance.new("UICorner", buyAllProductsButton).CornerRadius = UDim.new(0, 6)
-    end)
-
-    local containerFrame = Instance.new("Frame")
-    containerFrame.BackgroundColor3 = Color3.fromRGB(46, 46, 46)
-    containerFrame.BorderSizePixel = 0
-    containerFrame.Position = UDim2.new(0, 0, 1, 34)
-    containerFrame.Size = UDim2.new(0, 252, 0, 441)
-    containerFrame.Parent = developerProductsFrame
-
-    Instance.new("UICorner").Parent = containerFrame
-
-    local containerStroke = Instance.new("UIStroke")
-    containerStroke.Color = Color3.fromRGB(113, 113, 113)
-    containerStroke.Parent = containerFrame
-
-    local scrollingFrame = Instance.new("ScrollingFrame")
-    scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scrollingFrame.ScrollBarThickness = 5
-    scrollingFrame.Active = true
-    scrollingFrame.BackgroundTransparency = 1
-    scrollingFrame.BorderSizePixel = 0
-    scrollingFrame.Size = UDim2.new(1, 0, 1, 0)
-    scrollingFrame.Parent = containerFrame
-
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    listLayout.Parent = scrollingFrame
-
-    -- Template Produk
-    local exampleProductFrame = Instance.new("Frame")
-    exampleProductFrame.BackgroundTransparency = 1
-    exampleProductFrame.BorderSizePixel = 0
-    exampleProductFrame.Size = UDim2.new(1, 0, 0, 100)
-    exampleProductFrame.Visible = false
-    exampleProductFrame.Name = "ExampleFrame"
-    exampleProductFrame.Parent = scrollingFrame
-
-    local hoverBg = Instance.new("Frame")
-    hoverBg.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    hoverBg.BackgroundTransparency = 1
-    hoverBg.BorderSizePixel = 0
-    hoverBg.Size = UDim2.new(1, 0, 1, 0)
-    hoverBg.Name = "HoverBg"
-    hoverBg.Parent = exampleProductFrame
-    Instance.new("UICorner", hoverBg).CornerRadius = UDim.new(0, 6)
-
-    local nameLabel = Instance.new("TextLabel", exampleProductFrame)
-    nameLabel.Name = "NameLabel"
-    nameLabel.Font = Enum.Font.Gotham
-    nameLabel.Text = "Product Name:"
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextSize = 14
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Position = UDim2.new(0.048, 0, 0.1, 0)
-    nameLabel.Size = UDim2.new(0.8, 0, 0, 21)
-
-    local idLabel = Instance.new("TextLabel", exampleProductFrame)
-    idLabel.Name = "IDLabel"
-    idLabel.Font = Enum.Font.Gotham
-    idLabel.Text = "Product ID:"
-    idLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    idLabel.TextSize = 14
-    idLabel.TextXAlignment = Enum.TextXAlignment.Left
-    idLabel.BackgroundTransparency = 1
-    idLabel.Position = UDim2.new(0.048, 0, 0.29, 0)
-    idLabel.Size = UDim2.new(0.5, 0, 0, 21)
-
-    local descLabel = Instance.new("TextLabel", exampleProductFrame)
-    descLabel.Name = "DescLabel"
-    descLabel.Font = Enum.Font.Gotham
-    descLabel.Text = "Product Description:"
-    descLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    descLabel.TextSize = 14
-    descLabel.TextXAlignment = Enum.TextXAlignment.Left
-    descLabel.BackgroundTransparency = 1
-    descLabel.Position = UDim2.new(0.048, 0, 0.47, 0)
-    descLabel.Size = UDim2.new(0.8, 0, 0, 21)
-
-    local priceLabel = Instance.new("TextLabel", exampleProductFrame)
-    priceLabel.Name = "PriceLabel"
-    priceLabel.Font = Enum.Font.Gotham
-    priceLabel.Text = "Product Price:"
-    priceLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    priceLabel.TextSize = 14
-    priceLabel.TextXAlignment = Enum.TextXAlignment.Left
-    priceLabel.BackgroundTransparency = 1
-    priceLabel.Position = UDim2.new(0.048, 0, 0.645, 0)
-    priceLabel.Size = UDim2.new(0.5, 0, 0, 21)
-
-    local divider = Instance.new("Frame", exampleProductFrame)
-    divider.Name = "Divider"
-    divider.BackgroundColor3 = Color3.fromRGB(102, 102, 102)
-    divider.BorderSizePixel = 0
-    divider.Position = UDim2.new(0, 0, 1, 0)
-    divider.Size = UDim2.new(1, 0, 0, 2)
-
-    local clickDetector = Instance.new("TextButton", exampleProductFrame)
-    clickDetector.Name = "Click"
-    clickDetector.Text = ""
-    clickDetector.TextTransparency = 1
-    clickDetector.BackgroundTransparency = 1
-    clickDetector.Size = UDim2.new(1, 0, 1, 0)
-
-    local copyScriptButton = Instance.new("TextButton", exampleProductFrame)
-    copyScriptButton.Name = "CopyScriptButton"
-    copyScriptButton.Font = Enum.Font.GothamBold
-    copyScriptButton.Text = "Copy Script"
-    copyScriptButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    copyScriptButton.TextSize = 12
-    copyScriptButton.BackgroundColor3 = Color3.fromRGB(70, 70, 150)
-    copyScriptButton.Position = UDim2.new(0.65, 0, 0.25, 0)
-    copyScriptButton.Size = UDim2.new(0, 80, 0, 21)
-    Instance.new("UICorner", copyScriptButton).CornerRadius = UDim.new(0, 4)
-
-    local copyButton = Instance.new("TextButton", exampleProductFrame)
-    copyButton.Name = "CopyButton"
-    copyButton.Font = Enum.Font.GothamBold
-    copyButton.Text = "Copy ID"
-    copyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    copyButton.TextSize = 12
-    copyButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    copyButton.Position = UDim2.new(0.65, 0, 0.45, 0)
-    copyButton.Size = UDim2.new(0, 80, 0, 21)
-    Instance.new("UICorner", copyButton).CornerRadius = UDim.new(0, 4)
-
-    local buyButton = Instance.new("TextButton", exampleProductFrame)
-    buyButton.Name = "BuyButton"
-    buyButton.Font = Enum.Font.GothamBold
-    buyButton.Text = "Buy Product"
-    buyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    buyButton.TextSize = 12
-    buyButton.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-    buyButton.Position = UDim2.new(0.65, 0, 0.65, 0)
-    buyButton.Size = UDim2.new(0, 80, 0, 21)
-    Instance.new("UICorner", buyButton).CornerRadius = UDim.new(0, 4)
-
-    -- Fungsi Bantuan
-    local function createHoverEffect(button, hoverColor)
-        local originalColor = button.BackgroundColor3
-        local tweenInfo = TweenInfo.new(0.15)
-        button.MouseEnter:Connect(function()
-            TweenService:Create(button, tweenInfo, {
-                BackgroundColor3 = hoverColor
-            }):Play()
-        end)
-        button.MouseLeave:Connect(function()
-            TweenService:Create(button, tweenInfo, {
-                BackgroundColor3 = originalColor
-            }):Play()
-        end)
+local function copyToClipboard(text)
+    if setclipboard then
+        setclipboard(text)
+        return true
     end
+    return false
+end
 
-    local function generateProductScript(productId)
-        return [[local Players = game:GetService("Players")
-local MarketplaceService = game:GetService("MarketplaceService")
+local function generateProductScript(productId)
+    return [[local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
 
 local LocalPlayer = Players.LocalPlayer
-local product = ]] .. tostring(productId) .. [[
+local productId = ]] .. tostring(productId) .. [[
 
-function StartProduct()
-    MarketplaceService:SignalPromptProductPurchaseFinished(LocalPlayer.UserId, product, true)
+MarketplaceService:SignalPromptProductPurchaseFinished(LocalPlayer.UserId, productId, true)]]
 end
 
-StartProduct()]]
-    end
-
-    -- Logik Utama
-    task.spawn(function()
-        local success, products = pcall(function()
-            return MarketplaceService:GetDeveloperProductsAsync()
-        end)
-
-        if not success then
-            return
-        end
-        
-        local allProductsInfo = products:GetCurrentPage()
-
-        local buyAllProductsButton = developerProductsFrame:WaitForChild("BuyAllProductsButton", 5)
-        if buyAllProductsButton then
-            createHoverEffect(buyAllProductsButton, Color3.fromRGB(180, 70, 70))
-            buyAllProductsButton.MouseButton1Click:Connect(function()
-                if activeResetThreads[buyAllProductsButton] then
-                    task.cancel(activeResetThreads[buyAllProductsButton])
-                end
-                
-                if not buyAllProductsButton:GetAttribute("OriginalText") then
-                    buyAllProductsButton:SetAttribute("OriginalText", buyAllProductsButton.Text)
-                    buyAllProductsButton:SetAttribute("OriginalColor", buyAllProductsButton.BackgroundColor3)
-                end
-                local originalText = buyAllProductsButton:GetAttribute("OriginalText")
-                local originalColor = buyAllProductsButton:GetAttribute("OriginalColor")
-
-                buyAllProductsButton.Text = "Processing..."
-                buyAllProductsButton.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
-                
-                for _, productInfo in pairs(allProductsInfo) do
-                    Finished(productInfo)
-                    task.wait(0.3)
-                end
-                
-                activeResetThreads[buyAllProductsButton] = task.spawn(function()
-                    buyAllProductsButton.Text = "Done!"
-                    buyAllProductsButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-                    task.wait(1.5)
-                    buyAllProductsButton.Text = originalText
-                    buyAllProductsButton.BackgroundColor3 = originalColor
-                    activeResetThreads[buyAllProductsButton] = nil
-                end)
-            end)
-        end
-
-        for _, productInfo in pairs(allProductsInfo) do
-            local productFrame = exampleProductFrame:Clone()
-            productFrame.Visible = true
-            productFrame.Parent = scrollingFrame
-            productFrame.NameLabel.Text = "Name: " .. productInfo.Name
-            productFrame.IDLabel.Text = "ID: " .. tostring(productInfo.ProductId)
-            productFrame.DescLabel.Text = "Description: " .. productInfo.Description
-            productFrame.PriceLabel.Text = "Price: " .. tostring(productInfo.PriceInRobux)
-
-            productFrame.Click.MouseButton1Click:Connect(function()
-                Finished(productInfo)
-            end)
-
-            local productHoverBg = productFrame.HoverBg
-            productFrame.Click.MouseEnter:Connect(function()
-                TweenService:Create(productHoverBg, TweenInfo.new(0.2), {
-                    BackgroundTransparency = 0.7
-                }):Play()
-            end)
-            productFrame.Click.MouseLeave:Connect(function()
-                TweenService:Create(productHoverBg, TweenInfo.new(0.2), {
-                    BackgroundTransparency = 1
-                }):Play()
-            end)
-
-            local productCopyScriptButton = productFrame.CopyScriptButton
-            createHoverEffect(productCopyScriptButton, Color3.fromRGB(90, 90, 180))
-            productCopyScriptButton.MouseButton1Click:Connect(function()
-                if setclipboard then
-                    if activeResetThreads[productCopyScriptButton] then
-                        task.cancel(activeResetThreads[productCopyScriptButton])
-                    end
-                    if not productCopyScriptButton:GetAttribute("OriginalText") then
-                        productCopyScriptButton:SetAttribute("OriginalText", productCopyScriptButton.Text)
-                        productCopyScriptButton:SetAttribute("OriginalColor", productCopyScriptButton.BackgroundColor3)
-                    end
-                    local originalText = productCopyScriptButton:GetAttribute("OriginalText")
-                    local originalColor = productCopyScriptButton:GetAttribute("OriginalColor")
-
-                    local scriptCode = generateProductScript(productInfo.ProductId)
-                    setclipboard(scriptCode)
-                    productCopyScriptButton.Text = "Copied!"
-                    productCopyScriptButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-                    
-                    activeResetThreads[productCopyScriptButton] = task.spawn(function()
-                        task.wait(1)
-                        productCopyScriptButton.Text = originalText
-                        productCopyScriptButton.BackgroundColor3 = originalColor
-                        activeResetThreads[productCopyScriptButton] = nil
-                    end)
-                end
-            end)
-
-            local productCopyButton = productFrame.CopyButton
-            createHoverEffect(productCopyButton, Color3.fromRGB(90, 90, 90))
-            productCopyButton.MouseButton1Click:Connect(function()
-                if setclipboard then
-                    if activeResetThreads[productCopyButton] then
-                        task.cancel(activeResetThreads[productCopyButton])
-                    end
-                    if not productCopyButton:GetAttribute("OriginalText") then
-                        productCopyButton:SetAttribute("OriginalText", productCopyButton.Text)
-                        productCopyButton:SetAttribute("OriginalColor", productCopyButton.BackgroundColor3)
-                    end
-                    local originalText = productCopyButton:GetAttribute("OriginalText")
-                    local originalColor = productCopyButton:GetAttribute("OriginalColor")
-
-                    setclipboard(tostring(productInfo.ProductId))
-                    productCopyButton.Text = "Copied!"
-                    productCopyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-                    
-                    activeResetThreads[productCopyButton] = task.spawn(function()
-                        task.wait(1)
-                        productCopyButton.Text = originalText
-                        productCopyButton.BackgroundColor3 = originalColor
-                        activeResetThreads[productCopyButton] = nil
-                    end)
-                end
-            end)
-
-            local productBuyButton = productFrame.BuyButton
-            createHoverEffect(productBuyButton, Color3.fromRGB(180, 70, 70))
-            productBuyButton.MouseButton1Click:Connect(function()
-                if activeResetThreads[productBuyButton] then
-                    task.cancel(activeResetThreads[productBuyButton])
-                end
-                if not productBuyButton:GetAttribute("OriginalText") then
-                    productBuyButton:SetAttribute("OriginalText", productBuyButton.Text)
-                    productBuyButton:SetAttribute("OriginalColor", productBuyButton.BackgroundColor3)
-                end
-                local originalText = productBuyButton:GetAttribute("OriginalText")
-                local originalColor = productBuyButton:GetAttribute("OriginalColor")
-
-                productBuyButton.Text = "Processing..."
-                productBuyButton.BackgroundColor3 = Color3.fromRGB(200, 100, 0)
-                
-                Finished(productInfo)
-                
-                activeResetThreads[productBuyButton] = task.spawn(function()
-                    task.wait(0.5)
-                    productBuyButton.Text = "Done!"
-                    productBuyButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
-                    task.wait(1.5)
-                    productBuyButton.Text = originalText
-                    productBuyButton.BackgroundColor3 = originalColor
-                    activeResetThreads[productBuyButton] = nil
-                end)
-            end)
-        end
-    end)
-
-    -- Fungsi Kawalan Tetingkap
-    closeButton.MouseButton1Click:Connect(function()
-        mainGui:Destroy()
-        productFakerGui = nil
-        productFakerActive = false
-    end)
-
-    local isDragging = false
-    local dragStart
-    local startPosition
-    local mouseMoveConnection
-    local mouseUpConnection
-
-    developerProductsFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = true
-            dragStart = input.Position
-            startPosition = developerProductsFrame.Position
-
-            mouseMoveConnection = UserInputService.InputChanged:Connect(function(moveInput)
-                if (moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch) and isDragging then
-                    local delta = moveInput.Position - dragStart
-                    developerProductsFrame.Position = UDim2.new(startPosition.X.Scale, startPosition.X.Offset + delta.X, startPosition.Y.Scale, startPosition.Y.Offset + delta.Y)
-                end
-            end)
-
-            mouseUpConnection = UserInputService.InputEnded:Connect(function(endInput)
-                if (endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch) and isDragging then
-                    isDragging = false
-                    if mouseMoveConnection then
-                        mouseMoveConnection:Disconnect()
-                    end
-                    if mouseUpConnection then
-                        mouseUpConnection:Disconnect()
-                    end
-                end
-            end)
-        end
-    end)
-
-    productFakerGui = mainGui
-    return mainGui
-end
-
-local function toggleProductFaker()
-    if productFakerActive then
-        if productFakerGui then
-            productFakerGui:Destroy()
-            productFakerGui = nil
-        end
-        productFakerActive = false
-    else
-        createProductFakerGUI()
-        productFakerActive = true
-    end
-end
-
--- ========== WINDUI INTEGRATION ==========
-
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
-
-local Window = WindUI:CreateWindow({
-    Title = "RyDev | UNIVERSAL",
-    Author = "by RyDev",
-    Folder = "RyDev",
-    Icon = "shield",
-    NewElements = true,
-})
+-- ========== WINDUI TABS ==========
 
 -- ESP Tab
 local ESPTab = Window:Tab({
@@ -1571,6 +1330,11 @@ ESPControls:Toggle({
     Default = getgenv().ESPSettings.Enabled,
     Callback = function(state)
         getgenv().ESPSettings.Enabled = state
+        WindUI:Notify({
+            Title = "ESP " .. (state and "Enabled" or "Disabled"),
+            Content = "ESP system has been " .. (state and "enabled" or "disabled"),
+            Icon = state and "eye" or "eye-off"
+        })
     end
 })
 
@@ -1762,6 +1526,11 @@ InvisibleControls:Keybind({
     Value = "X",
     Callback = function(key)
         getgenv().InvisibleSettings.ToggleKey = Enum.KeyCode[key]
+        WindUI:Notify({
+            Title = "Keybind Updated",
+            Content = "Invisible keybind set to: " .. key,
+            Icon = "key"
+        })
     end
 })
 
@@ -2066,7 +1835,7 @@ SystemSection:Button({
     end
 })
 
--- Product Faker Tab
+-- Product Faker Tab (NO EXTRA GUI)
 local ProductFakerTab = Window:Tab({
     Title = "Product Faker",
     Icon = "shopping-bag",
@@ -2085,14 +1854,12 @@ ProductFakerSection:Section({
 ProductFakerSection:Space()
 
 ProductFakerSection:Section({
-    Title = [[Fake purchase developer products in-game.
+    Title = [[Fake purchase developer products directly through WindUI.
     
 Features:
-• View all developer products
-• Buy individual products  
 • Buy all products at once
-• Copy product IDs
-• Copy purchase scripts
+• Load available products
+• No extra GUI windows
 
 Note: This may not work in all games!]],
     TextSize = 14,
@@ -2103,40 +1870,80 @@ Note: This may not work in all games!]],
 ProductFakerSection:Space()
 
 ProductFakerSection:Button({
-    Title = "Toggle Product Faker",
-    Desc = "Open/Close product faker window",
+    Title = "Buy All Products",
+    Desc = "Purchase all available developer products",
     Color = Color3.fromHex("#ff6b35"),
-    Icon = "shopping-bag",
-    Callback = toggleProductFaker
+    Icon = "shopping-cart",
+    Callback = buyAllProducts
 })
 
 ProductFakerSection:Space()
 
 ProductFakerSection:Button({
-    Title = "Refresh Products",
+    Title = "Load Products",
     Desc = "Reload developer products list",
     Color = Color3.fromHex("#30a2ff"),
     Icon = "refresh-cw",
     Callback = function()
-        if productFakerActive and productFakerGui then
-            productFakerGui:Destroy()
-            productFakerGui = nil
-            task.wait(0.5)
-            createProductFakerGUI()
-            WindUI:Notify({
-                Title = "Product Faker",
-                Content = "Products list refreshed!",
-                Icon = "check"
-            })
-        else
-            WindUI:Notify({
-                Title = "Product Faker",
-                Content = "Open Product Faker first!",
-                Icon = "x"
-            })
-        end
+        local products = loadDeveloperProducts()
+        WindUI:Notify({
+            Title = "Product Faker",
+            Content = string.format("Loaded %d developer products!", #products),
+            Icon = "check"
+        })
     end
 })
+
+ProductFakerSection:Space()
+
+-- Product List Section
+local ProductListSection = ProductFakerTab:Section({
+    Title = "Available Products",
+})
+
+-- Dynamic product buttons will be added here
+local function updateProductList()
+    -- Clear existing product buttons (simplified approach)
+    ProductListSection:Clear()
+    
+    if #developerProducts == 0 then
+        ProductListSection:Section({
+            Title = "No products loaded. Click 'Load Products' above.",
+            TextSize = 14,
+            TextTransparency = 0.5,
+        })
+        return
+    end
+    
+    for i, product in ipairs(developerProducts) do
+        ProductListSection:Button({
+            Title = product.Name,
+            Desc = string.format("ID: %d | Price: %d R$", product.Id, product.Price),
+            Color = Color3.fromHex("#4a90e2"),
+            Icon = "package",
+            Callback = function()
+                if buyProductById(product.Id) then
+                    WindUI:Notify({
+                        Title = "Product Purchased",
+                        Content = string.format("Successfully purchased: %s", product.Name),
+                        Icon = "check"
+                    })
+                end
+            end
+        })
+        
+        if i < #developerProducts then
+            ProductListSection:Space()
+        end
+    end
+end
+
+-- Load products automatically
+task.spawn(function()
+    task.wait(2)
+    loadDeveloperProducts()
+    updateProductList()
+end)
 
 -- Info Tab
 local InfoTab = Window:Tab({
@@ -2180,10 +1987,9 @@ Spectator System:
 • Camera Control
 
 Product Faker:
-• View Developer Products
-• Fake Purchase Products
-• Copy Product IDs
-• Copy Purchase Scripts
+• Buy all developer products
+• No extra GUI windows
+• Direct WindUI integration
 
 All settings are automatically saved!]],
     TextSize = 14,
@@ -2287,7 +2093,7 @@ print("🎯 RyDev | UNIVERSAL Suite LOADED!")
 print("✅ Complete ESP System")
 print("✅ Invisible System with Speed Boost")
 print("✅ Spectator System with Multiple Features")
-print("✅ Product Faker System")
+print("✅ Product Faker System (No Extra GUI)")
 print("✅ WindUI Controls")
 print("✅ Automatic Settings Saving")
 print("🚀 Ready to use!")
